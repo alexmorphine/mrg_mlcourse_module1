@@ -8,7 +8,10 @@ import shutil
 import pickle
 import os.path
 
+
+
 """
+Взято тут: https://gist.github.com/akesling/5358964
 Loosely inspired by http://abel.ee.ucla.edu/cvxopt/_downloads/mnist.py
 which is GPL licensed.
 """
@@ -87,3 +90,39 @@ def OneHot(y):
     b[np.arange(len(y)), y] = 1
     return b
 
+
+def Stratified(X, y, train=0.8, random_state=42):
+    train_ind = []
+    test_ind = []
+
+    unique, counts = np.unique(y, return_counts=True)
+    counts_dict = dict(zip(unique, counts))
+    counts_ind = {}
+    for cls in counts_dict:
+        counts_ind[cls] = np.where(np.isin(y, cls))[0]
+
+    for cls, count in counts_dict.items():
+        count = int(np.around(count * train))
+        train_ind.extend(counts_ind[cls].tolist()[:count])
+        test_ind.extend(counts_ind[cls].tolist()[count:])
+
+    train_ind = np.array(train_ind)
+    test_ind = np.array(test_ind)
+    sh = list(range(len(train_ind)))  # больше рандома богу рандома
+    np.random.seed(random_state)
+    np.random.shuffle(sh)
+    train_ind = train_ind[sh]
+
+    return X[train_ind], X[test_ind], y[train_ind], y[test_ind]
+
+
+def load_model(model_input_dir):
+    with open(model_input_dir, 'rb') as f:
+        from_pickle = pickle.load(f)
+        return from_pickle['W'], from_pickle['b'], from_pickle['mean'], from_pickle['std'], from_pickle['eig_vecs']
+
+
+def accuracy(y_pred, y_true):
+    y_true = np.argmax(y_true, axis=1)
+    acc = np.mean(y_pred == y_true)
+    return acc
